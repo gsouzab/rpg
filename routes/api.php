@@ -13,6 +13,10 @@ use Illuminate\Http\Request;
 |
 */
 
-Route::middleware('auth:api')->get('/user', function (Request $request) {
-    return $request->user();
+Route::prefix('game')->group(function () {
+    Route::get('/', 'GameController@play');
+
+    Route::get('/startRound', 'GameController@startRound');
+
+    Route::get('/attackRound/first/{firstPlayer}/second/{secondPlayer}', 'GameController@attackRound');
 });
