@@ -18,5 +18,7 @@ Route::prefix('game')->group(function () {
 
     Route::get('/startRound', 'GameController@startRound');
 
-    Route::get('/attackRound/first/{firstPlayer}/second/{secondPlayer}', 'GameController@attackRound');
+    Route::get('/attackPlayer/attacker/{attackerName}/defender/{defenderName}', 'GameController@attackPlayer');
+
+    Route::get('/restart', 'GameController@restart');
 });
