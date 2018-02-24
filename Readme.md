@@ -10,7 +10,7 @@ To run, you must install [docker-compose](https://docs.docker.com/compose/).
 Copy the .env file and define App Secret. See Laravel 5.6 [installation guide](https://laravel.com/docs/5.6/installation)
 
 ```sh
-$ cp .env.template .env 
+$ cp .env.example .env 
 ```
 
 With docker-compose installed, and after cloning this repo:
