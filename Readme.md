@@ -1,6 +1,8 @@
 # RPG Simulation
 Built with [Laravel](https://laravel.com), [Vue.js](https://vuejs.org/)
 
+![Game example](example.png?raw=true "Game example")
+
 ## Development
 
 To run, you must install [docker-compose](https://docs.docker.com/compose/). 
