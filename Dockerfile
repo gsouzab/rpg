@@ -12,7 +12,7 @@ WORKDIR /app
 
 COPY . /app
 
-RUN composer install
+RUN composer install --no-scripts
 RUN npm install && npm run production
 
 CMD php artisan serve --host=0.0.0.0 --port=8000
