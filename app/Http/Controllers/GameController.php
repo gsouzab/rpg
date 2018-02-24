@@ -27,7 +27,7 @@ class GameController extends Controller
             }
 
             return $next($request);
-        });
+        })->except('restart');
     }
 
 
@@ -40,6 +40,11 @@ class GameController extends Controller
         return rand(1, $max);
     }
     
+    /**
+     * Initialize game
+     * Starts the game with initial data
+     * @return Game The game
+     */
     private function initGame() {
         return [
             "status" => self::STARTED,
@@ -47,9 +52,12 @@ class GameController extends Controller
             "players" => [
                 "human" => [
                     "name" => "human",
-                    "hp" => 12,
-                    "strength" => 1,
-                    "agility" => 2,                    
+                    "stats" => [
+                        "maxHp" => 12,
+                        "hp" => 12,
+                        "strength" => 1,
+                        "agility" => 2,                    
+                    ],                    
                     "weapon" => [
                         "max_damage" => 6,
                         "attack" => 2,
@@ -58,9 +66,12 @@ class GameController extends Controller
                 ],
                 "orc" => [
                     "name" => "orc",
-                    "hp" => 20,
-                    "strength" => 2,
-                    "agility" => 0,                    
+                    "stats" => [
+                        "maxHp" => 20,
+                        "hp" => 20,
+                        "strength" => 2,
+                        "agility" => 0,                    
+                    ],
                     "weapon" => [
                         "max_damage" => 8,
                         "attack" => 1,
@@ -85,81 +96,76 @@ class GameController extends Controller
      * @return integer N The damage of the attack
      */
     private function calculateDamage($player) {
-        return $this->rollDice($player["weapon"]["max_damage"]) + $player["strength"];
+        return $this->rollDice($player["weapon"]["max_damage"]) + $player["stats"]["strength"];
     }
     
+    /**
+     * Starts a round
+     * Roll dices for both players and return its value 
+     */
     public function startRound() {
         return [
             "data" => 
             [
                 "human" => [
                     "dice" => $this->rollDice(), 
-                    "agility" => $this->game["players"]["human"]["agility"]
+                    "agility" => $this->game["players"]["human"]["stats"]["agility"]
                 ],
                 "orc" => [
                     "dice" => $this->rollDice(),
-                    "agility" => $this->game["players"]["orc"]["agility"]
+                    "agility" => $this->game["players"]["orc"]["stats"]["agility"]
                 ] 
             ]
         ];
     }
 
-    private function attackPlayer($attacker, $defender) {
-        $hasDamage = ($this->rollDice() + $attacker["agility"] + $attacker["weapon"]["attack"]) >
-                        ($this->rollDice() + $defender["agility"] + $defender["weapon"]["defense"]);   
+    /**
+     * Performs an attack 
+     * The damage will be calculated by simulating a dice thrown (maximum weapon damange) plus the player strength points
+     * @param string $attackerName The name of the attacking player
+     * @param string $defenderName The name of the defending player
+     * @return Game The game
+     */
+    public function attackPlayer($attackerName, $defenderName) {
+        $attacker = $this->game["players"][$attackerName];
+        $defender = $this->game["players"][$defenderName];
+        
+        $hasDamage = ($this->rollDice() + $attacker["stats"]["agility"] + $attacker["weapon"]["attack"]) >
+                        ($this->rollDice() + $defender["stats"]["agility"] + $defender["weapon"]["defense"]);   
         
         $damage = 0;
 
         if ($hasDamage) {
             $damage = $this->calculateDamage($attacker);
-            $defender["hp"] -= $damage;
+            $defender["stats"]["hp"] -= $damage;            
         }
 
-        return [$damage, $defender];
+        if ($defender["stats"]["hp"] <= 0) {
+            $this->endGame($attacker);
+        }
+
+        $this->game["players"][$defenderName] = $defender;
+        $this->updateGame();
+
+        return [
+            "damage" => $damage,
+            "game" => $this->game
+        ];
     }
 
+    /**
+     * Ends the game
+     * @param Player $winner The game winner
+     */
     private function endGame($winner) {
         $this->game["winner"] = $winner;
         $this->game["status"] = self::ENDED;
     }
 
     /**
-     * Calculates the damage inflicted by a player
-     * The damage will be calculated by simulating a dice thrown (maximum weapon damange) plus the player strength points
-     * @param string $firstPlayerName The first player to attack
-     * @param string $secondPlayerName The second player to attack
+     * Restarts the game
      * @return Game The game
      */
-    public function attackRound($firstPlayerName, $secondPlayerName) {
-
-        $firstPlayer = $this->game["players"][$firstPlayerName];
-        $secondPlayer = $this->game["players"][$secondPlayerName];
-        $firstPlayerDamageTaken = 0;
-        $secondPlayerDamageTaken = 0;
-
-        list($secondPlayerDamageTaken, $secondPlayer) = $this->attackPlayer($firstPlayer, $secondPlayer);               
-        $this->game["players"][$secondPlayerName] = $secondPlayer;
-
-        if ($secondPlayer["hp"] > 0) {
-            list($firstPlayerDamageTaken, $firstPlayer) = $this->attackPlayer($secondPlayer, $firstPlayer);
-            $this->game["players"][$firstPlayerName] = $firstPlayer;
-
-            if ($firstPlayer["hp"] <= 0) {
-                $this->endGame($secondPlayer);    
-            }
-        } else {
-            $this->endGame($firstPlayer);
-        }
-
-        $this->updateGame();
-
-        return [
-            "firstPlayerDamageTaken" => $firstPlayerDamageTaken,
-            "secondPlayerDamageTaken" => $secondPlayerDamageTaken,
-            "game" => $this->game
-        ];
-    }
-
     public function restart() {
         $this->game = $this->initGame();
         $this->updateGame();
